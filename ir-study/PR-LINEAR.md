@@ -7,7 +7,7 @@ A ready-to-adapt write-up for the `ir-optimisation` commit on
 **Before posting:** the image paths below are relative to this file. In a GitHub
 comment or PR description they will not resolve. Either drag the PNGs from
 `charts/` into the comment box and let GitHub rewrite the URLs, or push this
-repo and swap in `https://raw.githubusercontent.com/rikkus/NAMBench/<sha>/ir-study/charts/…`.
+repo and swap in `https://raw.githubusercontent.com/pedal-science/NAMBench/<sha>/ir-study/charts/…`.
 The `<picture>` blocks give a viewer in GitHub dark mode the dark rendering; if
 you paste by drag-and-drop, keep just the light `<img>` and drop the `<source>`.
 
@@ -120,7 +120,7 @@ callbacks.
 
 ## Results
 
-[NAMBench](https://github.com/rikkus/NAMBench)'s `nam_ir_benchmark`, 48 kHz,
+[NAMBench](https://github.com/pedal-science/NAMBench)'s `nam_ir_benchmark`, 48 kHz,
 one process, every callback timed. Five seconds of warm-up passes are
 discarded, then timed passes are accepted when the tightest 70% agree within
 3%; a cell that was rejected was rerun until it passed. The declared maximum

@@ -821,7 +821,7 @@ pass through a terminal, a file in the repo, or a chat window. With the
 1Password CLI, it never becomes visible at all:
 
 ```bash
-op read "op://Developer/f2x4p5ymikp25e4hlocah2zexe/credential" | gh secret set BENCHER_API_KEY --repo rikkus/NAMBench
+op read "op://Developer/f2x4p5ymikp25e4hlocah2zexe/credential" | gh secret set BENCHER_API_KEY --repo pedal-science/NAMBench
 ```
 
 If the field is not called `credential`, this lists the item's fields without
@@ -842,7 +842,7 @@ bencher measure update --units '% of one core' "$BENCHER_PROJECT" core-percent
 Then the project slug, which is not a secret:
 
 ```bash
-gh variable set BENCHER_PROJECT --repo rikkus/NAMBench --body "your-bencher-project-slug"
+gh variable set BENCHER_PROJECT --repo pedal-science/NAMBench --body "your-bencher-project-slug"
 ```
 
 For running by hand on the Pi, put it in the environment rather than in a file:
