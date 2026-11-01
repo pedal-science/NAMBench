@@ -86,7 +86,7 @@ jobs:
               {"testbed": "pi500", "driver": "portable", "cpu-set": "0-3",
                "runner": ["self-hosted", "Linux", "ARM64", "nambench-pi500"]},
           ]
-          # i5-9500t and i7-4770hq-vm are the x86_64 testbeds. They are recorded by
+          # i5-9500t and i7-4770HQ-vbox are the x86_64 testbeds. They are recorded by
           # Scripts/track-benchmark.sh (detect_testbed) and are intentionally
           # absent here: neither is a self-hosted runner, and listing them
           # would make the default `all` wait for a runner that is not

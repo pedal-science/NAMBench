@@ -259,7 +259,7 @@ detect_testbed() {
 							;;
 						oracle)
 							case "${cpu}" in
-								*"i7-4770HQ"*) echo "i7-4770hq-vm" ;;
+								*"i7-4770HQ"*) echo "i7-4770HQ-vbox" ;;
 								*) echo "" ;;
 							esac
 							;;
@@ -277,7 +277,7 @@ if [ -z "${TESTBED}" ]; then
 	[ -n "${TESTBED}" ] || die "could not work out which machine this is.
 
   Pass --testbed explicitly, using the same name detect_testbed() would:
-      m2-air, m1-air, pi500, i5-9500t, i7-4770hq-vm
+      m2-air, m1-air, pi500, i5-9500t, i7-4770HQ-vbox
   A new name is not an error — Bencher will create it — which is exactly why
   getting it wrong quietly starts a second history for one machine."
 	log "detected testbed: ${TESTBED}"

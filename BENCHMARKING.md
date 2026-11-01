@@ -113,16 +113,21 @@ Add `--bmf out.json` to also write Bencher Metric Format.
 | `m1-air` | M1 MacBook Air | xcode | |
 | `pi500` | Raspberry Pi 500, Cortex-A76 | portable | Ubuntu 24.04 aarch64 |
 | `i5-9500t` | HP ProDesk 600 G5 Mini, Core i5-9500T | portable | bare metal, hostname `pro` |
-| `i7-4770hq-vm` | Core i7-4770HQ in VirtualBox | portable | 4 vCPUs, hostname `mp` |
+| `i7-4770HQ-vbox` | Core i7-4770HQ in VirtualBox | portable | 4 vCPUs, hostname `mp` |
 
 **The Pi's numbers are not comparable with the laptops', only with their own
 history**: different ISA, different compiler, different clock behaviour.
 
-**`i7-4770hq-vm` is that CPU, virtualized.** The guest's CPUID is a Core
-i7-4770HQ; the `-vm` suffix records that the run is in VirtualBox. The
-comparison on the testbed is `a2_fast` against `a2_planar` on that machine.
-Neither Intel machine is a self-hosted runner, so both are recorded with
-`track-benchmark.sh` rather than by `.github/workflows/benchmark.yml`.
+**`i7-4770HQ-vbox` is that CPU, virtualized.** The guest's CPUID is a Core
+i7-4770HQ; `-vbox` records that the run is in VirtualBox. The X64 lab ladder
+on this guest picks the same kernels as the i5-9500T: tile 8 for A2 standard
+and tile 32 for A2 nano, with ring-direct, skip-last, and the linear ring.
+On the Ampeg capture, pinned to one vCPU, an 8-second window gives A2
+standard 3.19× and A2 nano 7.56× against `a2_fast`. Pass-to-pass spread there
+is about 5–16%, wider than the protocol's 3% agreement gate, so that run is
+not uploaded. Neither Intel machine is a self-hosted runner, so both are
+recorded with `track-benchmark.sh` rather than by
+`.github/workflows/benchmark.yml`.
 
 **The Pi is a Pi 500, not a Pi 5.** Same BCM2712 and the same Cortex-A76, so as
 a *core* it is the Pi 5 datapoint — but the 500 is passively cooled inside a
@@ -771,10 +776,10 @@ being comparable, which is the one thing this arrangement exists to prevent. The
 script warns when it has to guess.
 
 The script works out which machine it is on — `m2-air`, `m1-air`, `pi500`,
-`i5-9500t`, `i7-4770hq-vm` — and refuses to guess if it cannot. That matters
+`i5-9500t`, `i7-4770HQ-vbox` — and refuses to guess if it cannot. That matters
 more than it looks: a wrong testbed name is not an error, because Bencher
 creates testbeds on demand, so it quietly starts a *second* history for one
-machine. `i5-9500t` is the bare-metal part. `i7-4770hq-vm` is that CPU when
+machine. `i5-9500t` is the bare-metal part. `i7-4770HQ-vbox` is that CPU when
 systemd reports VirtualBox.
 
 Useful flags:
