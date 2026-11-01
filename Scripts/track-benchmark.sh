@@ -243,27 +243,23 @@ detect_testbed() {
 				*"Raspberry Pi 5"*) echo "pi5" ;;
 				*"Raspberry Pi 4"*) echo "pi4" ;;
 				*)
-					# No device tree, so this is not a Pi. The testbed is still
-					# the machine, not "x86_64": a bare-metal i5 and a
-					# VirtualBox guest are different histories, and the guest's
-					# CPUID string is the host Mac's, which would be the wrong
-					# name for it.
-					local virt cpu host
+					# No device tree, so this is not a Pi. Name the CPU, and
+					# mark a VM in the slug. The CPUID on the VirtualBox guest
+					# is the real chip; the comparison on that testbed is
+					# a2_fast against a2_planar, on that machine.
+					local virt cpu
 					virt="$(systemd-detect-virt 2>/dev/null || true)"
+					cpu="$(awk -F': ' '/^model name/ { print $2; exit }' /proc/cpuinfo 2>/dev/null || true)"
 					case "${virt}" in
 						none|"")
-							cpu="$(awk -F': ' '/^model name/ { print $2; exit }' /proc/cpuinfo 2>/dev/null || true)"
 							case "${cpu}" in
 								*"i5-9500T"*) echo "i5-9500t" ;;
 								*) echo "" ;;
 							esac
 							;;
 						oracle)
-							# VirtualBox. The hostname is the identity: the
-							# product name in DMI is just "VirtualBox".
-							host="$(hostname -s 2>/dev/null || hostname)"
-							case "${host}" in
-								mp) echo "mp" ;;
+							case "${cpu}" in
+								*"i7-4770HQ"*) echo "i7-4770hq-vm" ;;
 								*) echo "" ;;
 							esac
 							;;
@@ -281,7 +277,7 @@ if [ -z "${TESTBED}" ]; then
 	[ -n "${TESTBED}" ] || die "could not work out which machine this is.
 
   Pass --testbed explicitly, using the same name detect_testbed() would:
-      m2-air, m1-air, pi500, i5-9500t, mp
+      m2-air, m1-air, pi500, i5-9500t, i7-4770hq-vm
   A new name is not an error — Bencher will create it — which is exactly why
   getting it wrong quietly starts a second history for one machine."
 	log "detected testbed: ${TESTBED}"
