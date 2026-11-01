@@ -20,9 +20,9 @@ UPSTREAM_URL="https://github.com/sdatkinson/NeuralAmpModelerCore.git"
 UPSTREAM_SHA="0b3d3c97b0859a3a8c92a8628c4dd89a25eb5842"
 
 # The planar kernels the benchmark measures. PR #313 stays the NEON work, on
-# fork branch apple-silicon-a2-planar. This pin is one commit past that head:
-# fork branch x86_64-a2-planar, which adds the AVX2 body and nothing else.
-# Measuring the PR head instead would drop the Intel kernels.
+# fork branch apple-silicon-a2-planar. This pin is the tip of fork branch
+# x86_64-a2-planar: that head, plus the AVX2 body, plus the note that the same
+# tiles win on the i7-4770HQ. Measuring the PR head would drop the Intel kernels.
 #
 # apple-silicon-a2-planar is cut from upstream main and carries no other engine
 # variants: just a2_fast, plus a2_planar, plus a two-line change in
@@ -37,7 +37,7 @@ UPSTREAM_SHA="0b3d3c97b0859a3a8c92a8628c4dd89a25eb5842"
 # and the reference the kernels are compared against computes different bits.
 # The AVX2 body lives in a2_planar_avx2.cpp.
 PLANAR_URL="https://github.com/rikkus/OptimisationWorkOnNeuralAmpModelerCore.git"
-PLANAR_SHA="55233dd3b87193e558278215a35dfdc338603592"
+PLANAR_SHA="5fafcb65b2721376c1ef483fc95a25f64f388b6a"
 
 # linearplus: Core's Linear model with its FFT path replaced by uniform
 # partitions whose multiplies are spread across the callbacks between
