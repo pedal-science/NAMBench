@@ -45,6 +45,10 @@
   #include "a32_common.h"
 #endif
 
+#if defined(NB_ENABLE_X64_LAB)
+  #include "x64_common.h"
+#endif
+
 #include "nam_bench_shim.h"
 #include "nb_shim_timing.h"
 
@@ -206,6 +210,11 @@ int g_full_kernel = -1;
 int g_a32_kernel = -1;
 #endif
 
+#if defined(NB_ENABLE_X64_LAB)
+/// The same, for the x86_64 AVX2 lab. Negative means "none chosen yet".
+int g_x64_kernel = -1;
+#endif
+
 /// Report which engine this build will actually route `modelConfig` to.
 ///
 /// This mirrors wavenet::create_config rather than trusting the build flags,
@@ -257,6 +266,10 @@ NbEngine detect_engine(const nlohmann::json& modelConfig, int32_t* channels)
   // assertion rejects, rather than silently building something else.
   if (g_a32_kernel >= 0 && isA2 && a2Channels == a32lab::kernel_channels(g_a32_kernel))
     return NbEngineA32;
+  return isA2 ? NbEngineA2Fast : NbEngineGeneric;
+#elif defined(NB_ENABLE_X64_LAB)
+  if (g_x64_kernel >= 0 && isA2 && a2Channels == x64lab::kernel_channels(g_x64_kernel))
+    return NbEngineX64;
   return isA2 ? NbEngineA2Fast : NbEngineGeneric;
 #else
   return isA2 ? NbEngineA2Fast : NbEngineGeneric;
@@ -379,7 +392,8 @@ NB_EXPORT NbModel* NB_FN(_create)(const uint8_t* namBytes, size_t len, NbSubmode
     int32_t channels = 0;
     const NbEngine engine = detect_engine(*configIt, &channels);
 
-#if defined(NB_ENABLE_SLIM_LAB) || defined(NB_ENABLE_FULL_LAB) || defined(NB_ENABLE_A32_LAB)
+#if defined(NB_ENABLE_SLIM_LAB) || defined(NB_ENABLE_FULL_LAB) || defined(NB_ENABLE_A32_LAB) \
+  || defined(NB_ENABLE_X64_LAB)
     // Lab kernels are not reachable through create_config — that is the point of
     // a lab — so one is built directly from the same weight stream get_dsp would
     // have handed to the engine it stands in for.
@@ -429,6 +443,18 @@ NB_EXPORT NbModel* NB_FN(_create)(const uint8_t* namBytes, size_t len, NbSubmode
       if (!lab_weights(lab_w))
         return nullptr;
       dsp = a32lab::create(g_a32_kernel, *configIt, std::move(lab_w),
+                           nam::get_sample_rate_from_nam_file(model));
+      built = true;
+    }
+#endif
+
+#if defined(NB_ENABLE_X64_LAB)
+    if (!built && engine == NbEngineX64)
+    {
+      std::vector<float> lab_w;
+      if (!lab_weights(lab_w))
+        return nullptr;
+      dsp = x64lab::create(g_x64_kernel, *configIt, std::move(lab_w),
                            nam::get_sample_rate_from_nam_file(model));
       built = true;
     }
@@ -690,5 +716,37 @@ NB_EXPORT int NB_FN(_kernel_exact)(int index)
 }
 
 #endif // NB_ENABLE_A32_LAB
+
+#if defined(NB_ENABLE_X64_LAB)
+
+NB_EXPORT int NB_FN(_kernel_count)(void)
+{
+  return x64lab::kernel_count();
+}
+
+NB_EXPORT const char* NB_FN(_kernel_name)(int index)
+{
+  return x64lab::kernel_name(index);
+}
+
+NB_EXPORT int NB_FN(_select_kernel)(int index)
+{
+  if (index < 0 || index >= x64lab::kernel_count())
+    return 1;
+  g_x64_kernel = index;
+  return 0;
+}
+
+NB_EXPORT int NB_FN(_kernel_channels)(int index)
+{
+  return x64lab::kernel_channels(index);
+}
+
+NB_EXPORT int NB_FN(_kernel_exact)(int index)
+{
+  return x64lab::kernel_exact(index);
+}
+
+#endif // NB_ENABLE_X64_LAB
 
 } // extern "C"

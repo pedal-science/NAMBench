@@ -56,6 +56,10 @@ NB_DECLARE_KERNEL_LAB(nb_full)
 NB_DECLARE_VARIANT(nb_a32)
 NB_DECLARE_KERNEL_LAB(nb_a32)
 #endif
+#if defined(NAMBENCH_HAVE_X64_LAB)
+NB_DECLARE_VARIANT(nb_x64)
+NB_DECLARE_KERNEL_LAB(nb_x64)
+#endif
 }
 
 namespace
@@ -164,6 +168,7 @@ const char* engine_name(NbEngine engine)
     case NbEngineFull: return "full";
     case NbEnginePlanar: return "a2_planar";
     case NbEngineA32: return "a32";
+    case NbEngineX64: return "x64";
     case NbEngineUnknown: break;
   }
   return "unknown";
@@ -194,7 +199,7 @@ int main(int argc, char** argv)
   Config config;
   std::string modelPath, audioPath;
   fs::path outputPath = "benchmark.json";
-  std::string slimSpec, fullSpec, a32Spec;
+  std::string slimSpec, fullSpec, a32Spec, x64Spec;
   std::string testbedNote;
 
   auto usage = []() {
@@ -209,8 +214,10 @@ int main(int argc, char** argv)
       "  --slim <list>            slim-lab kernels: all, none, names or indices\n"
       "  --full <list>            full-lab kernels, same format\n"
       "  --a32 <list>             a32-lab kernels (ARMv7), same format\n"
+      "  --x64 <list>             x64-lab kernels (AVX2), same format\n"
       "  --list-slim/--list-full  print a kernel table and exit\n"
       "  --list-a32               print the a32 kernel table and exit\n"
+      "  --list-x64               print the x64 kernel table and exit\n"
       "\n"
       "  --block-size <n>         frames per process() call (default 64)\n"
       "  --warmup-seconds <s>     discarded warm-up (default 5)\n"
@@ -268,6 +275,15 @@ int main(int argc, char** argv)
   NB_FILL_LAB(a32Api, nb_a32);
 #endif
 
+#if defined(NAMBENCH_HAVE_X64_LAB)
+  EngineApi x64Api;
+  x64Api.name = "x64";
+  x64Api.repository = "this repository";
+  x64Api.codePath = "Sources/X64Engines";
+  NB_FILL_BASE(x64Api, nb_x64);
+  NB_FILL_LAB(x64Api, nb_x64);
+#endif
+
   auto list_kernels = [](const EngineApi& api) {
     if (api.kernel_count == nullptr)
       return;
@@ -308,6 +324,8 @@ int main(int argc, char** argv)
       fullSpec = argv[++i];
     else if (arg == "--a32" && has)
       a32Spec = argv[++i];
+    else if (arg == "--x64" && has)
+      x64Spec = argv[++i];
     else if (arg == "--block-size" && has)
       config.blockSize = static_cast<int>(std::strtol(argv[++i], nullptr, 10));
     else if (arg == "--warmup-seconds" && has)
@@ -402,6 +420,15 @@ int main(int argc, char** argv)
       list_kernels(a32Api);
 #else
       std::printf("this build has no a32 lab\n");
+#endif
+      return 0;
+    }
+    else if (arg == "--list-x64")
+    {
+#if defined(NAMBENCH_HAVE_X64_LAB)
+      list_kernels(x64Api);
+#else
+      std::printf("this build has no x64 lab\n");
 #endif
       return 0;
     }
@@ -513,7 +540,7 @@ int main(int argc, char** argv)
   // and the ones the planar library was built with ever disagree, the run
   // stops rather than reporting a2_fast twice.
   constexpr bool kPlanarBuildable =
-#if defined(__aarch64__) || (defined(__arm__) && defined(__ARM_NEON) && defined(__ARM_FEATURE_FMA))
+#if defined(__aarch64__) || (defined(__arm__) && defined(__ARM_NEON) && defined(__ARM_FEATURE_FMA))   || (defined(__AVX2__) && defined(__FMA__))
     true;
 #else
     false;
@@ -522,8 +549,8 @@ int main(int argc, char** argv)
   if (!kPlanarBuildable)
   {
     if (!config.quiet)
-      std::printf("planar excluded: a2_planar.h enables the kernels on AArch64 and on 32-bit ARM "
-                  "with FMA, so this build is plain a2_fast\n");
+      std::printf("planar excluded: a2_planar.h enables the kernels on AArch64, on 32-bit ARM "
+                  "with FMA, and on x86_64 with AVX2+FMA; this build is plain a2_fast\n");
   }
   else if (probe.channels == 3 || probe.channels == 8)
   {
@@ -535,7 +562,7 @@ int main(int argc, char** argv)
                 probe.channels);
   }
 
-#if defined(NAMBENCH_HAVE_LABS) || defined(NAMBENCH_HAVE_A32_LAB)
+#if defined(NAMBENCH_HAVE_LABS) || defined(NAMBENCH_HAVE_A32_LAB) || defined(NAMBENCH_HAVE_X64_LAB)
   // Which submodel a kernel serves is asked of the kernel, not of the lab. The
   // slim and full labs answer with their one channel count, so this behaves
   // exactly as the old lab-wide check did for them; the a32 lab carries kernels
@@ -621,7 +648,10 @@ int main(int argc, char** argv)
   #if defined(NAMBENCH_HAVE_A32_LAB)
   add_lab(a32Api, a32Spec);
   #endif
-#endif // NAMBENCH_HAVE_LABS || NAMBENCH_HAVE_A32_LAB
+  #if defined(NAMBENCH_HAVE_X64_LAB)
+  add_lab(x64Api, x64Spec);
+  #endif
+#endif // NAMBENCH_HAVE_LABS || NAMBENCH_HAVE_A32_LAB || NAMBENCH_HAVE_X64_LAB
 
 #if !defined(NAMBENCH_HAVE_LABS)
   if (!slimSpec.empty() || !fullSpec.empty())
@@ -630,6 +660,10 @@ int main(int argc, char** argv)
 #if !defined(NAMBENCH_HAVE_A32_LAB)
   if (!a32Spec.empty())
     std::fprintf(stderr, "warning: this build has no a32 lab; --a32 ignored\n");
+#endif
+#if !defined(NAMBENCH_HAVE_X64_LAB)
+  if (!x64Spec.empty())
+    std::fprintf(stderr, "warning: this build has no x64 lab; --x64 ignored\n");
 #endif
 
   // --- Build every model up front -------------------------------------------
@@ -671,8 +705,8 @@ int main(int argc, char** argv)
     {
       std::fprintf(stderr,
                    "\nerror: the planar variant routed to %s, not to the planar kernels.\n"
-                   "  a2_planar.h enables them on AArch64, and on 32-bit ARM with NEON and\n"
-                   "  FMA, so this build is measuring a2_fast twice. Refusing to report that\n"
+                   "  a2_planar.h enables them on AArch64, on 32-bit ARM with NEON and FMA,\n"
+                   "  and on x86_64 with AVX2+FMA. Measuring a2_fast twice is refused.\n"
                    "  as a comparison.\n"
                    "\n"
                    "  Expected on x86, and on MSVC/ARM64, which spells the architecture\n"

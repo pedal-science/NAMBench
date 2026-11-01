@@ -40,7 +40,8 @@
 
 extern "C" {
 NB_DECLARE_VARIANT_(NB_PREFIX)
-#if defined(NB_ENABLE_SLIM_LAB) || defined(NB_ENABLE_FULL_LAB) || defined(NB_ENABLE_A32_LAB)
+#if defined(NB_ENABLE_SLIM_LAB) || defined(NB_ENABLE_FULL_LAB) || defined(NB_ENABLE_A32_LAB) \
+  || defined(NB_ENABLE_X64_LAB)
 NB_DECLARE_KERNEL_LAB_(NB_PREFIX)
 #endif
 }
@@ -49,7 +50,8 @@ NB_DECLARE_KERNEL_LAB_(NB_PREFIX)
 #define NB_CAT(a, b) NB_CAT_(a, b)
 #define NB_FN(suffix) NB_CAT(NB_PREFIX, suffix)
 
-#if defined(NB_ENABLE_SLIM_LAB) || defined(NB_ENABLE_FULL_LAB) || defined(NB_ENABLE_A32_LAB)
+#if defined(NB_ENABLE_SLIM_LAB) || defined(NB_ENABLE_FULL_LAB) || defined(NB_ENABLE_A32_LAB) \
+  || defined(NB_ENABLE_X64_LAB)
   #define NB_IS_LAB 1
 #else
   #define NB_IS_LAB 0
@@ -87,6 +89,14 @@ NB_DECLARE_KERNEL_LAB_(NB_PREFIX)
   #define NB_FPU "vfp+fma"
 #elif defined(__aarch64__) || defined(_M_ARM64)
   #define NB_FPU "asimd"
+#elif defined(__AVX2__) && defined(__FMA__)
+  #define NB_FPU "avx2+fma"
+#elif defined(__AVX2__)
+  #define NB_FPU "avx2"
+#elif defined(__AVX__)
+  #define NB_FPU "avx"
+#elif defined(__SSE2__)
+  #define NB_FPU "sse2"
 #else
   #define NB_FPU "none"
 #endif
@@ -185,6 +195,7 @@ const char* engine_name(NbEngine engine)
     case NbEngineFull: return "full";
     case NbEnginePlanar: return "a2_planar";
     case NbEngineA32: return "a32";
+    case NbEngineX64: return "x64";
     case NbEngineUnknown: break;
   }
   return "unknown";
@@ -524,7 +535,7 @@ int main(int argc, char** argv)
   //                      submodel is chosen per kernel from the kernel's own
   //                      declared channel count rather than from a lab-wide
   //                      constant.
-#if defined(NB_ENABLE_A32_LAB)
+#if defined(NB_ENABLE_A32_LAB) || defined(NB_ENABLE_X64_LAB)
   const int kernels = NB_FN(_kernel_count)();
   for (int k = 0; k < kernels; k++)
   {

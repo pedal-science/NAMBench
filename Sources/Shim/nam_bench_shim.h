@@ -70,6 +70,10 @@ typedef enum NbEngine {
   /// running the 8-channel submodel surfaces as a routing failure rather than
   /// as a silent a2_fast measurement.
   NbEngineA32 = 7,
+  /// One of the in-project experimental kernels for x86_64 with AVX2 and FMA.
+  /// Same selection rule as NbEngineA32: reported only once a kernel has been
+  /// selected and that kernel's channel count matches the loaded submodel.
+  NbEngineX64 = 8,
 } NbEngine;
 
 /// Which submodel of a SlimmableContainer to run.

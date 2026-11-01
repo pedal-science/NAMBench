@@ -53,6 +53,7 @@ set(NB_VENDOR "${NB_ROOT}/vendor")
 foreach(_required
 	"${NB_VENDOR}/upstream/NAM/wavenet/a2_fast.cpp"
 	"${NB_VENDOR}/planar/NAM/wavenet/a2_planar.cpp"
+	"${NB_VENDOR}/planar/NAM/wavenet/a2_planar_avx2.cpp"
 	"${NB_VENDOR}/eigen/Eigen/Dense"
 	"${NB_VENDOR}/upstream/Dependencies/nlohmann/json.hpp")
 	if(NOT EXISTS "${_required}")
@@ -101,6 +102,14 @@ else()
 	set(NB_ARMV7 OFF)
 endif()
 
+# x86_64 with AVX2+FMA. The lab is Sources/X64Engines; the architecture flags
+# below are a correctness setting the same way -mfpu=neon-vfpv4 is for ARMv7.
+if(NB_TARGET_ARCH MATCHES "^(x86_64|AMD64|amd64|x64)$")
+	set(NB_X86_64 ON)
+else()
+	set(NB_X86_64 OFF)
+endif()
+
 # A universal or multi-arch build would compile the lab sources for every slice,
 # including the ones with no NEON. Refuse rather than fail deep in a header.
 list(LENGTH NB_TARGET_ARCH _nb_arch_count)
@@ -110,7 +119,7 @@ if(_nb_arch_count GREATER 1)
 		"  Configure once per architecture instead.")
 endif()
 
-message(STATUS "NAMBench conformance: target arch '${NB_TARGET_ARCH}', AArch64 = ${NB_AARCH64}")
+message(STATUS "NAMBench conformance: target arch '${NB_TARGET_ARCH}', AArch64 = ${NB_AARCH64}, x86_64 = ${NB_X86_64}")
 
 # ---------------------------------------------------------------------------
 # Flags shared by every variant.
@@ -178,6 +187,25 @@ if(NB_ARMV7 AND NOT MSVC)
 		"-mfpu=${NAMBENCH_ARM_FPU} -mfloat-abi=hard")
 endif()
 
+# ---------------------------------------------------------------------------
+# x86_64: AVX2 + FMA are a CORRECTNESS setting here, not tuning.
+#
+# GCC's default -march=x86-64 is SSE2. Eigen then uses 4-wide packets and does
+# not define EIGEN_VECTORIZE_FMA, so a2_fast's C=8 path would compute different
+# bits from the AVX2 kernels — and from what a plugin on this CPU would ship.
+# -mavx2 -mfma selects Eigen's AVX packet of 8 and fused multiply-add.
+# -ffp-contract=fast is stated because a2_fast's C=3 branch depends on the
+# compiler contracting a*b+c into an FMA.
+# ---------------------------------------------------------------------------
+if(NB_X86_64 AND NOT MSVC)
+	target_compile_options(nb_conformance_flags INTERFACE
+		-mavx2 -mfma -ffp-contract=fast)
+	message(STATUS "NAMBench conformance: x86_64 flags -mavx2 -mfma -ffp-contract=fast")
+elseif(NB_X86_64 AND MSVC)
+	target_compile_options(nb_conformance_flags INTERFACE /arch:AVX2)
+	message(STATUS "NAMBench conformance: x86_64 flags /arch:AVX2")
+endif()
+
 target_compile_definitions(nb_conformance_flags INTERFACE
 	NDEBUG=1
 	NAM_ENABLE_A2_FAST=1)
@@ -234,7 +262,8 @@ function(nb_add_variant target)
 		"${NB_ROOT}/Sources/Shim"
 		"${NB_ROOT}/Sources/SlimEngines"
 		"${NB_ROOT}/Sources/FullEngines"
-		"${NB_ROOT}/Sources/A32Engines")
+		"${NB_ROOT}/Sources/A32Engines"
+		"${NB_ROOT}/Sources/X64Engines")
 
 	# Eigen and nlohmann as SYSTEM, so -Wall -Wextra stays about our code.
 	target_include_directories(${target} SYSTEM PRIVATE
@@ -296,10 +325,11 @@ nb_add_variant(nam_conformance_upstream
 # thing proposed there cannot drift apart.
 #
 # NAM_A2_PLANAR — the switch that decides whether the kernels exist at all — is
-# defined inside a2_planar.h for any target that defines __aarch64__, and for
-# 32-bit ARM that also defines __ARM_NEON and __ARM_FEATURE_FMA. The ARMv7 arm
-# of that gate is why the -mfpu block above is a correctness setting: at
-# -mfpu=neon the gate stays shut, and this variant silently becomes a2_fast.
+# defined inside a2_planar.h for any target that defines __aarch64__, for
+# 32-bit ARM that also defines __ARM_NEON and __ARM_FEATURE_FMA, and for x86_64
+# with AVX2 and FMA. The ARMv7 arm of that gate is why the -mfpu block above is
+# a correctness setting: at -mfpu=neon the gate stays shut, and this variant
+# silently becomes a2_fast. The AVX2 arm needs -mavx2 -mfma for the same reason.
 # Elsewhere the translation unit compiles to an object with no symbols and this
 # variant is plain a2_fast. That is not a build failure and must not be treated
 # as one: the driver asks which engine it actually got, and reports a2_fast
@@ -307,8 +337,9 @@ nb_add_variant(nam_conformance_upstream
 #
 # Nothing needs forcing. The gate used to be __APPLE__ && __aarch64__, and this
 # file used to carry a NAMBENCH_FORCE_A2_PLANAR option to open it; the gate has
-# since been widened upstream twice — to AArch64, then to ARMv7 — each time on
-# the evidence that option was added to collect, so both are gone.
+# since been widened upstream three times — to AArch64, then to ARMv7, then to
+# AVX2+FMA — each time on the evidence that option was added to collect, so
+# both are gone.
 # ---------------------------------------------------------------------------
 nb_add_variant(nam_conformance_planar
 	VENDOR planar
@@ -340,7 +371,14 @@ else()
 	set(NB_BUILD_LABS_A32 OFF)
 endif()
 
-message(STATUS "NAMBench conformance: all variants = ${NAMBENCH_ALL_VARIANTS}, kernel labs = ${NB_BUILD_LABS}, a32 lab = ${NB_BUILD_LABS_A32}")
+# The x86_64 AVX2 lab — only meaningful on x86_64 with AVX2+FMA.
+if(NAMBENCH_ALL_VARIANTS AND NB_X86_64 AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+	set(NB_BUILD_LABS_X64 ON)
+else()
+	set(NB_BUILD_LABS_X64 OFF)
+endif()
+
+message(STATUS "NAMBench conformance: all variants = ${NAMBENCH_ALL_VARIANTS}, kernel labs = ${NB_BUILD_LABS}, a32 lab = ${NB_BUILD_LABS_A32}, x64 lab = ${NB_BUILD_LABS_X64}")
 
 if(NB_BUILD_LABS_A32)
 	file(GLOB _a32_sources CONFIGURE_DEPENDS "${NB_ROOT}/Sources/A32Engines/*.cpp")
@@ -355,6 +393,18 @@ if(NB_BUILD_LABS_A32)
 		NAME a32
 		DEFINES NB_ENABLE_A32_LAB=1
 		SOURCES ${_a32_sources})
+endif()
+
+if(NB_BUILD_LABS_X64)
+	file(GLOB _x64_sources CONFIGURE_DEPENDS "${NB_ROOT}/Sources/X64Engines/*.cpp")
+
+	# --- Variant 6: the x86_64 AVX2 lab, both submodels --------------------
+	nb_add_variant(nam_conformance_x64
+		VENDOR upstream
+		PREFIX nb_x64
+		NAME x64
+		DEFINES NB_ENABLE_X64_LAB=1
+		SOURCES ${_x64_sources})
 endif()
 
 if(NB_BUILD_LABS)
@@ -427,7 +477,8 @@ if(NAMBENCH_BUILD_BENCHMARK)
 			"${NB_ROOT}/Sources/Shim"
 			"${NB_ROOT}/Sources/SlimEngines"
 			"${NB_ROOT}/Sources/FullEngines"
-			"${NB_ROOT}/Sources/A32Engines")
+			"${NB_ROOT}/Sources/A32Engines"
+			"${NB_ROOT}/Sources/X64Engines")
 
 		target_include_directories(${target} SYSTEM PRIVATE
 			"${_tree}/Dependencies/nlohmann"
@@ -485,6 +536,15 @@ if(NAMBENCH_BUILD_BENCHMARK)
 		list(APPEND NB_ENGINE_LIBRARIES nam_engine_a32)
 	endif()
 
+	if(NB_BUILD_LABS_X64)
+		nb_add_engine_library(nam_engine_x64
+			VENDOR upstream PREFIX nb_x64 NAME x64
+			DEFINES NB_ENABLE_X64_LAB=1
+			SOURCES ${_x64_sources})
+
+		list(APPEND NB_ENGINE_LIBRARIES nam_engine_x64)
+	endif()
+
 	# nb_counters.cpp is part of the driver, not of any engine: it must not be
 	# linked into a shared engine library, where its perf_event_open would end up
 	# inside the thing being measured.
@@ -500,6 +560,9 @@ if(NAMBENCH_BUILD_BENCHMARK)
 	endif()
 	if(NB_BUILD_LABS_A32 AND NB_ARMV7)
 		target_compile_definitions(nam_benchmark PRIVATE NAMBENCH_HAVE_A32_LAB=1)
+	endif()
+	if(NB_BUILD_LABS_X64)
+		target_compile_definitions(nam_benchmark PRIVATE NAMBENCH_HAVE_X64_LAB=1)
 	endif()
 
 	# Find the engine libraries next to the executable, so the build tree can be
@@ -652,6 +715,9 @@ if(NB_BUILD_LABS)
 endif()
 if(NB_BUILD_LABS_A32)
 	list(APPEND NB_RUN_TARGETS nam_conformance_a32)
+endif()
+if(NB_BUILD_LABS_X64)
+	list(APPEND NB_RUN_TARGETS nam_conformance_x64)
 endif()
 
 foreach(_target ${NB_RUN_TARGETS})

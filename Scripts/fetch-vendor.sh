@@ -29,14 +29,15 @@ UPSTREAM_SHA="0b3d3c97b0859a3a8c92a8628c4dd89a25eb5842"
 # other engine variants: just a2_fast, plus a2_planar, plus a two-line change in
 # A2FastConfig::create that prefers the planar model where one exists.
 #
-# The gate is __aarch64__, or 32-bit ARM with NEON and FMA -- not
-# __APPLE__ && __aarch64__. Where it cannot open the translation unit has no
-# symbols in it and the A2 path is byte for byte what upstream ships. The ARMv7
-# arm of the gate needs -mfpu=neon-vfpv4: with plain -mfpu=neon,
-# __ARM_FEATURE_FMA is undefined, Eigen picks non-fused vmlaq_f32, and the
-# reference the kernels are compared against computes different bits.
+# The gate is __aarch64__, or 32-bit ARM with NEON and FMA, or x86_64 with
+# AVX2 and FMA -- not __APPLE__ && __aarch64__. Where it cannot open the
+# translation unit has no symbols in it and the A2 path is byte for byte what
+# upstream ships. The ARMv7 arm of the gate needs -mfpu=neon-vfpv4: with plain
+# -mfpu=neon, __ARM_FEATURE_FMA is undefined, Eigen picks non-fused vmlaq_f32,
+# and the reference the kernels are compared against computes different bits.
+# The AVX2 body lives in a2_planar_avx2.cpp.
 PLANAR_URL="https://github.com/rikkus/OptimisationWorkOnNeuralAmpModelerCore.git"
-PLANAR_SHA="44412fad6ad135d51218785e15dc7418c29a2124"
+PLANAR_SHA="55233dd3b87193e558278215a35dfdc338603592"
 
 # linearplus: Core's Linear model with its FFT path replaced by uniform
 # partitions whose multiplies are spread across the callbacks between
@@ -229,6 +230,7 @@ fi
 [ -f "${VENDOR}/upstream/NAM/wavenet/a2_fast.cpp" ] || die "vendor/upstream missing NAM/wavenet/a2_fast.cpp"
 [ -f "${VENDOR}/planar/NAM/wavenet/a2_planar.cpp" ] || die "vendor/planar missing NAM/wavenet/a2_planar.cpp"
 [ -f "${VENDOR}/planar/NAM/wavenet/a2_planar.h" ] || die "vendor/planar missing NAM/wavenet/a2_planar.h"
+[ -f "${VENDOR}/planar/NAM/wavenet/a2_planar_avx2.cpp" ] || die "vendor/planar missing NAM/wavenet/a2_planar_avx2.cpp"
 [ -f "${VENDOR}/eigen/Eigen/Dense" ] || die "vendor/eigen missing Eigen/Dense"
 [ -f "${VENDOR}/upstream/Dependencies/nlohmann/json.hpp" ] || die "vendor/upstream missing nlohmann/json.hpp"
 [ -f "${VENDOR}/planar/Dependencies/nlohmann/json.hpp" ] || die "vendor/planar missing nlohmann/json.hpp"
