@@ -232,8 +232,12 @@ detect_testbed() {
 			esac
 			;;
 		Linux)
-			local model
-			model="$(tr -d '\0' < /proc/device-tree/model 2>/dev/null || true)"
+			local model=""
+			# The redirect has to be guarded: the shell reports a missing
+			# device tree itself, and 2>/dev/null on tr does not catch that.
+			if [ -r /proc/device-tree/model ]; then
+				model="$(tr -d '\0' < /proc/device-tree/model 2>/dev/null || true)"
+			fi
 			case "${model}" in
 				*"Raspberry Pi 500"*) echo "pi500" ;;
 				*"Raspberry Pi 5"*) echo "pi5" ;;
