@@ -112,9 +112,19 @@ Add `--bmf out.json` to also write Bencher Metric Format.
 | `m2-air` | M2 MacBook Air 15" | xcode | on macOS 27 beta |
 | `m1-air` | M1 MacBook Air | xcode | |
 | `pi500` | Raspberry Pi 500, Cortex-A76 | portable | Ubuntu 24.04 aarch64 |
+| `i5-9500t` | HP ProDesk 600 G5 Mini, Core i5-9500T | portable | bare metal, hostname `pro` |
+| `mp` | VirtualBox guest on a Mac | portable | hostname `mp`, 4 vCPUs |
 
 **The Pi's numbers are not comparable with the laptops', only with their own
 history**: different ISA, different compiler, different clock behaviour.
+
+**`i5-9500t` and `mp` are not one Intel result.** `i5-9500t` is the bare-metal
+desktop (six cores, AVX2+FMA, no hypervisor). `mp` is a VirtualBox guest: its
+CPUID string says Core i7-4770HQ, which is the host Mac's processor, not a
+bare-metal Haswell, and the timing includes the hypervisor. The testbed name
+is the guest's hostname for that reason. A threshold on one does not apply to
+the other. Neither is a self-hosted runner, so they are recorded with
+`track-benchmark.sh` rather than by `.github/workflows/benchmark.yml`.
 
 **The Pi is a Pi 500, not a Pi 5.** Same BCM2712 and the same Cortex-A76, so as
 a *core* it is the Pi 5 datapoint — but the 500 is passively cooled inside a
@@ -572,7 +582,7 @@ dimension and there are two things to say with it. The machine is deliberately
 not in the name: that is the *testbed* dimension, and keeping it separate is
 what stops an M2's history being averaged with a Pi's.
 
-So four names across three testbeds are twelve independent series. Both halves
+So the four names are an independent series on every testbed. Both halves
 are spelled the way the Core code path spells them, underscores and all, so a
 label on the dashboard and a symbol in the source are the same word.
 
@@ -762,10 +772,12 @@ two machines' results would then sit in different Bencher branches and stop
 being comparable, which is the one thing this arrangement exists to prevent. The
 script warns when it has to guess.
 
-The script works out which machine it is on — `m2-air`, `m1-air`, `pi500` — and
-refuses to guess if it cannot. That matters more than it looks: a wrong testbed
-name is not an error, because Bencher creates testbeds on demand, so it quietly
-starts a *second* history for one machine.
+The script works out which machine it is on — `m2-air`, `m1-air`, `pi500`,
+`i5-9500t`, `mp` — and refuses to guess if it cannot. That matters more than
+it looks: a wrong testbed name is not an error, because Bencher creates
+testbeds on demand, so it quietly starts a *second* history for one machine.
+`i5-9500t` is recognised only when the CPU is that part and the machine is not
+a VM. `mp` is recognised only as the VirtualBox guest whose hostname is `mp`.
 
 Useful flags:
 

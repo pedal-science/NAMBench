@@ -73,9 +73,10 @@ where the FFT path starts to pay — and because two lengths are no more
 comparable to each other than two submodels are.
 
 The machine is *not* in the name: that is the testbed dimension, which is what
-keeps an M2's history from being averaged with a Pi's. So each name, on each of
-the three testbeds, is an independent series, and a threshold on one of them
-alerts on that kernel, on that model, on that machine alone.
+keeps an M2's history from being averaged with a Pi's, and a bare-metal i5's
+from being averaged with a VirtualBox guest. So each name, on each testbed, is
+an independent series, and a threshold on one of them alerts on that kernel,
+on that model, on that machine alone.
 
 Both halves are spelled the way the Core code path spells them, underscores and
 all, so that a label on a dashboard and a symbol in the source are the same word.
