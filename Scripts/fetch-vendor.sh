@@ -19,15 +19,15 @@ VENDOR="${REPO_ROOT}/vendor"
 UPSTREAM_URL="https://github.com/sdatkinson/NeuralAmpModelerCore.git"
 UPSTREAM_SHA="0b3d3c97b0859a3a8c92a8628c4dd89a25eb5842"
 
-# The planar NEON kernels, as proposed to Core in
-# https://github.com/sdatkinson/NeuralAmpModelerCore/pull/313 — the head of that
-# draft PR, not a summary of it. This is the code the benchmark now measures, so
-# the number and the proposal cannot drift apart.
+# The planar kernels the benchmark measures. PR #313 stays the NEON work, on
+# fork branch apple-silicon-a2-planar. This pin is one commit past that head:
+# fork branch x86_64-a2-planar, which adds the AVX2 body and nothing else.
+# Measuring the PR head instead would drop the Intel kernels.
 #
-# Fork branch apple-silicon-a2-planar (the head of PR #313, which now also
-# carries the ARMv7 work). That branch is cut from upstream main and carries no
-# other engine variants: just a2_fast, plus a2_planar, plus a two-line change in
-# A2FastConfig::create that prefers the planar model where one exists.
+# apple-silicon-a2-planar is cut from upstream main and carries no other engine
+# variants: just a2_fast, plus a2_planar, plus a two-line change in
+# A2FastConfig::create that prefers the planar model where one exists. It also
+# carries the ARMv7 work.
 #
 # The gate is __aarch64__, or 32-bit ARM with NEON and FMA, or x86_64 with
 # AVX2 and FMA -- not __APPLE__ && __aarch64__. Where it cannot open the
