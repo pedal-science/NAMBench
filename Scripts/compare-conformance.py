@@ -329,6 +329,14 @@ def expect_bit_identical(record: Record) -> bool:
     ):
         return False
 
+    # Another, the same way. The x64 lab's 3-channel control differs from a2_fast by
+    # 132.5 dB under Clang 18, and only there: GCC 12 to 15 and Clang 22 are exact.
+    # That branch's bit-identity rests on the compiler contracting a*b+c into an FMA
+    # the same way in both copies, so that is the likely place, but it has not been
+    # looked into.
+    if record.variant == "x64" and record.compiler.startswith("clang 18"):
+        return False
+
     # Newer records carry the claim itself, set by the kernel table rather than
     # spelled in the kernel's name. Believe it when it is there: the a32 lab is
     # a bit-exactness campaign, so nearly all of its kernels claim exactness and

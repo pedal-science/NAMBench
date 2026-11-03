@@ -57,9 +57,11 @@ as dB below the reference signal — the same measure `BenchCore` reports.
 - slim-lab kernels against `a2_fast` on the 3-channel submodel
 - full-lab `a2*` kernels against `a2_fast`
 - x64-lab kernels against `a2_fast` at their own width, exact where the kernel claims it
-- **a known failure:** fourteen a32-lab kernels differ from `a2_fast` by one LSB under
-  GCC on AArch64 (`Scripts/compare-conformance.py`, `expect_bit_identical`), so there
-  they are held to the floor rather than their claim. The cause has not been looked for
+- **two known failures,** held to the floor rather than their claim, in
+  `Scripts/compare-conformance.py` (`expect_bit_identical`). Neither cause has been
+  looked for. Fourteen a32-lab kernels differ from `a2_fast` by one LSB (125.1 dB below
+  signal) under GCC on AArch64, and the x64 lab's 3-channel control differs by 132.5 dB
+  under Clang 18
 
 The floor is 100 dB, about 17 bits down and far below the noise floor of any
 capture. Current pairings sit at 119–141 dB.
