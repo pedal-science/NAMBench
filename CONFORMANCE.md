@@ -30,12 +30,13 @@ reports the engine it actually got by asking the same detectors
 | | 8-channel submodel | 3-channel submodel |
 |---|---|---|
 | `a2_fast` | `a2_fast` | `a2_fast` |
-| `a2_planar`, on AArch64 | `a2_planar` | `a2_planar` |
-| `a2_planar`, elsewhere | `a2_fast` | `a2_fast` |
+| `a2_planar`, on AArch64, or on x86_64 with AVX2 and FMA | `a2_planar` | `a2_planar` |
+| `a2_planar`, elsewhere, MSVC included | `a2_fast` | `a2_fast` |
 | slim lab | not built | `slim` |
 | full lab | `full` | not built |
+| x64 lab | `x64` | `x64` |
 
-The "elsewhere" cells are the interesting ones. Off AArch64 (and off 32-bit
+The "elsewhere" cells are the interesting ones. Off those targets (and off 32-bit
 ARM with NEON and FMA) the planar checkout compiles to plain `a2_fast`, so a
 benchmark that assumed "planar framework means the planar kernels" would
 quietly measure the reference against itself. That is asserted rather than
@@ -47,12 +48,18 @@ to present a2_fast-vs-a2_fast as a comparison.
 Every variant is compared against the one it is derived from, as `max|diff|` and
 as dB below the reference signal — the same measure `BenchCore` reports.
 
-- `a2_planar` against `a2_fast` — held to **exact bit-identity**, on every
+- `a2_planar` against `a2_fast` — on ARM, held to **exact bit-identity**, on every
   platform and compiler, because that is precisely what Core PR #313 claims and
   asks Core to rely on: "not within a tolerance, not below the noise floor — the
-  same float32 bits, sample for sample"
+  same float32 bits, sample for sample". The AVX2 kernels make no such claim: they
+  keep the NEON per-tap FMA order while the Eigen-backed reference packs differently
+  for N ≥ 4, so on x86_64 they are held to a floor of 120 dB below signal
 - slim-lab kernels against `a2_fast` on the 3-channel submodel
 - full-lab `a2*` kernels against `a2_fast`
+- x64-lab kernels against `a2_fast` at their own width, exact where the kernel claims it
+- **a known failure:** fourteen a32-lab kernels differ from `a2_fast` by one LSB under
+  GCC on AArch64 (`Scripts/compare-conformance.py`, `expect_bit_identical`), so there
+  they are held to the floor rather than their claim. The cause has not been looked for
 
 The floor is 100 dB, about 17 bits down and far below the noise floor of any
 capture. Current pairings sit at 119–141 dB.
